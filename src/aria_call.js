@@ -14,22 +14,22 @@
     
 **************************************************************************************/
 
-var makeAction = (xml, parent) => {
+const makeAction = ({name, val, attr, children}, parent) => {
 
-  var action = {};
+  const action = {};
 
-  action.name = xml.name;
-  action.value = xml.val.trim();
-  action.parameters = xml.attr;
+  action.name = name;
+  action.value = val.trim();
+  action.parameters = attr;
   action.call = parent;
   action.next = null;
   action.children = null;
 
-  var lastChild = null;
-  if (xml.children && xml.children.length > 0) {
-    for (var i = 0; i < xml.children.length; i = i + 1) {
-      var x = xml.children[i];
-      var a = makeAction(x, parent);
+  let lastChild = null;
+  if (children && children.length > 0) {
+    for (let i = 0; i < children.length; i = i + 1) {
+      const x = children[i];
+      const a = makeAction(x, parent);
       if (!action.children) {
         action.children = a;
         lastChild = a;
@@ -45,16 +45,16 @@ var makeAction = (xml, parent) => {
 };
 
 // make subsequent requests, optionally passing back data
-var fetchTwiml = (method, twimlURL, call, data) => {
+const fetchTwiml = (method, twimlURL, call, data) => {
 
-  console.log("Fetching Twiml From: " + twimlURL);
+  console.log(`Fetching Twiml From: ${twimlURL}`);
   
-  var options = {
+  const options = {
     method: method || "POST",
     body: data || null
   };
 
-  var elements = url.parse(twimlURL);
+  const elements = url.parse(twimlURL);
   if (!elements.protocol) {
     twimlURL = url.resolve(call.baseUrl, twimlURL);
   }
@@ -62,8 +62,8 @@ var fetchTwiml = (method, twimlURL, call, data) => {
   fetch(twimlURL, options)
     .then(res => res.text()).then(twiml => {
       // create the linked list of actions to execute
-      var first = null;
-      var last = null;
+      const first = null;
+      let last = null;
 
       // wipe out the old stack
       call.stack = null;
@@ -72,10 +72,10 @@ console.log("XML Body:");
 console.log(twiml);
 
       // parse the xml and create a new stack
-      var xml = new parser.XmlDocument(twiml);
-      xml.eachChild((command, index, array) => {
+      const xml = new parser.XmlDocument(twiml);
+      xml.eachChild((command, index, {length}) => {
 
-        var action = makeAction(command, call);
+        const action = makeAction(command, call);
         if (!call.stack) {
           call.stack = action;
           last = action;
@@ -83,7 +83,7 @@ console.log(twiml);
           last.next = action;
           last = action;
         }
-        if (index === (array.length - 1)) {
+        if (index === (length - 1)) {
           last.next = null;
           call.processCall();
         }
@@ -92,106 +92,107 @@ console.log(twiml);
 };
 
 // load up a form data object with standard call parameters
-var setCallData = (call, form) => {
-  form.append("CallSid", call.sid);
+const setCallData = ({sid, from, to, status}, form) => {
+  form.append("CallSid", sid);
   form.append("AccountSid", "aria-call"); // perhaps use local IP or hostname?
-  form.append("From", call.from);
-  form.append("To", call.to);
-  form.append("CallStatus", call.status);
+  form.append("From", from);
+  form.append("To", to);
+  form.append("CallStatus", status);
   form.append("ApiVersion", "0.0.1");
   form.append("Direction", "inbound"); // TODO: fix this to reflect actual call direction
   form.append("ForwardedFrom", ""); // TODO: fix this too
   form.append("CallerName", ""); // TODO: and this
-}
+};
 
-function AriaCall(client, channel, url, twiml, done) {
+class AriaCall {
+  constructor(client, channel, url, twiml, done) {
 
-  var that = this;
+    const that = this;
 
-  this.client = client; // a reference to the ARI client
-  this.baseUrl = url; // the base URL from whence the Twiml was fetched
-  this.stack = null; // the call stack 
+    this.client = client; // a reference to the ARI client
+    this.baseUrl = url; // the base URL from whence the Twiml was fetched
+    this.stack = null; // the call stack 
 
-  this.originatingChannel = channel; // the channel that originated the call (incoming)
-  this.dialedChannel = null; // the dialed channel (if any) for the call
-  
-  this.channel = this.originatingChannel; // the active channel object for the call
-  
-  this.playback = null; // the placeholder for an active playback object
-  this.stopOnTone = false; // should the playback be stopped when a tone is received?
+    this.originatingChannel = channel; // the channel that originated the call (incoming)
+    this.dialedChannel = null; // the dialed channel (if any) for the call
+    
+    this.channel = this.originatingChannel; // the active channel object for the call
+    
+    this.playback = null; // the placeholder for an active playback object
+    this.stopOnTone = false; // should the playback be stopped when a tone is received?
 
-  this.digits = "";
-  this.digitTimer = null; // timer used to wait for digits;
-  this.maxDigits = 0; // maximum number of digits to collect
-  this.termDigit = "#"; // digit used to signal end of collection
-  this.digitCallback = null; // callback on digit collection
+    this.digits = "";
+    this.digitTimer = null; // timer used to wait for digits;
+    this.maxDigits = 0; // maximum number of digits to collect
+    this.termDigit = "#"; // digit used to signal end of collection
+    this.digitCallback = null; // callback on digit collection
 
-  this.hungup = false; // hangup flag
-  this.hangupCallback = null; // callback on hangup
+    this.hungup = false; // hangup flag
+    this.hangupCallback = null; // callback on hangup
 
-  this.from = channel.caller.number;
-  this.to = "";
-  this.createTime = new Date().getTime();
-  this.status = "Awesome";
-  
-  this.sid = uuid.v4();
-  
-  // advance to the next action in the list
-  this.advancePointer = () => {
-    if (that.stack.next) {
-      that.stack = that.stack.next;
-      that.processCall();
+    this.from = channel.caller.number;
+    this.to = "";
+    this.createTime = new Date().getTime();
+    this.status = "Awesome";
+    
+    this.sid = uuid.v4();
+    
+    // advance to the next action in the list
+    this.advancePointer = () => {
+      if (that.stack.next) {
+        that.stack = that.stack.next;
+        that.processCall();
+      } else {
+        that.terminateCall();
+      }
+    };
+
+    channel.on("ChannelDtmfReceived", ({digit}, {id}) => {
+      console.log(`Channel ${id} - Digit: ${digit}`);
+      that.digits += digit;
+      if (that.digitCallback) {
+        that.digitCallback(digit, that.digits);
+      }
+    });
+
+    channel.on("ChannelHangupRequest", (evt, {id}) => {
+      console.log(`Channel ${id} - Hangup Request`);
+      that.hungup = true;
+      if (that.hangupCallback) {
+        that.hangupCallback();
+      }
+    });
+
+    // fetch the Twiml for this call
+    fetchTwiml("GET", url, that, null);
+
+  }
+
+  processCall() {
+    const command = this.stack;
+    const action = twimlActions[command.name];
+    if (!action) {
+      console.log(`Invalid or improper command: ${command.name}`);
+      this.terminateCall();
     } else {
-      that.terminateCall();
+      action(command, command.call.advancePointer);
     }
-  };
+  }
 
-  channel.on("ChannelDtmfReceived", (evt, channel) => {
-    console.log("Channel " + channel.id + " - Digit: " + evt.digit);
-    that.digits += evt.digit;
-    if (that.digitCallback) {
-      that.digitCallback(evt.digit, that.digits);
+  terminateCall() {
+    // post the call record to the account's call history URI if set;
+    // do other post-call stuff here
+    const milliseconds = new Date().getTime();
+    console.log(`Channel ${this.channel.id} - Call duration: ${milliseconds - this.createTime}ms`);
+    if (!this.hungup) {
+      try {
+        this.channel.hangup();
+      } catch (e) {
+        // must have already hung up
+      }
     }
-  });
-
-  channel.on("ChannelHangupRequest", (evt, channel) => {
-    console.log("Channel " + channel.id + " - Hangup Request");
-    that.hungup = true;
-    if (that.hangupCallback) {
-      that.hangupCallback();
-    }
-  });
-
-  // fetch the Twiml for this call
-  fetchTwiml("GET", url, that, null);
-
+  }
 }
-
-
-AriaCall.prototype.processCall = function() {
-  var command = this.stack;
-  var action = twimlActions[command.name];
-  if (!action) {
-    console.log("Invalid or improper command: " + command.name);
-    this.terminateCall();
-  } else {
-    action(command, command.call.advancePointer);
-  }
-};
-
-AriaCall.prototype.terminateCall = function() {
-  // post the call record to the account's call history URI if set;
-  // do other post-call stuff here
-  var milliseconds = new Date().getTime();
-  console.log("Channel " + this.channel.id + " - Call duration: " + (milliseconds - this.createTime) + "ms");
-  if (!this.hungup) {
-    try {
-      this.channel.hangup();
-    } catch (e) {
-      // must have already hung up
-    }
-  }
-};
 
 
 

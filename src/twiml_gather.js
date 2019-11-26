@@ -17,7 +17,7 @@ twimlActions.Gather = (command, callback) => {
   var channel = call.channel;
   var client = call.client;
 
-  console.log("Channel " + channel.id + " - Gathering: " + command.value);
+  console.log(`Channel ${channel.id} - Gathering: ${command.value}`);
 
   var timeout = command.parameters.timeout || 5;
   var timer = null;
@@ -38,12 +38,12 @@ twimlActions.Gather = (command, callback) => {
     }
 
     // otherwise set a callback for digit events
-    call.digitCallback = (digit, digits) => {
+    call.digitCallback = (digit, {length}) => {
       if (digit === call.termDigit) {
         // done - received term digit;
         doneCollecting();
       } else
-      if ((call.maxDigits > 0) && (digits.length >= call.maxDigits)) {
+      if ((call.maxDigits > 0) && (length >= call.maxDigits)) {
         // done - hit max length
         doneCollecting();
       }
@@ -66,7 +66,7 @@ twimlActions.Gather = (command, callback) => {
     var returnDigits = call.digits;
     call.digits = "";
     
-    console.log("Channel " + channel.id + " - Done gathering. Collected: " + returnDigits);
+    console.log(`Channel ${channel.id} - Done gathering. Collected: ${returnDigits}`);
     
     // clear the timer
     if (timer) {
@@ -115,7 +115,7 @@ twimlActions.Gather = (command, callback) => {
 
     // move past any verbs other than Play or Say
     while ((child) && ((child.name !== "Play") && (child.name !== "Say"))) {
-      console.log("Channel " + channel.id + " - Invalid nested verb: " + child.name + ". Skipped");
+      console.log(`Channel ${channel.id} - Invalid nested verb: ${child.name}. Skipped`);
       child = child.next;
     }
     if (child) {

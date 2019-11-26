@@ -13,7 +13,7 @@ twimlActions.Hold = (command, callback) => {
   var playback = null;
   var bridge = null;
   
-  console.log("Channel " + channel.id + " - Hold");
+  console.log(`Channel ${channel.id} - Hold`);
 
   // find or create a holding bridge
   
@@ -22,7 +22,7 @@ twimlActions.Hold = (command, callback) => {
       throw err;
     }
 
-    bridge = bridges.filter(candidate => candidate.bridge_type === 'holding')[0];
+    bridge = bridges.filter(({bridge_type}) => bridge_type === 'holding')[0];
 
     if (bridge) {
       console.log(util.format('Using bridge %s', bridge.id));

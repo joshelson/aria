@@ -39,7 +39,7 @@ twimlActions.Play = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Playing: " + command.value);
+  console.log(`Channel ${channel.id} - Playing: ${command.value}`);
 
   // attach a handler function for digits
   call.digitCallback = (digit, digits) => {
@@ -61,7 +61,7 @@ twimlActions.Play = (command, callback) => {
       }
     });
     channel.play({
-      media: "sound:" + sound
+      media: `sound:${sound}`
     }, playback);
   };
 
@@ -130,7 +130,7 @@ twimlActions.Play = (command, callback) => {
     .rename(fileName)
     .run((err, files) => {
       if (err) {
-        console.log("Channel " + channel.id + " - ERROR: Unable to download requested file.");
+        console.log(`Channel ${channel.id} - ERROR: Unable to download requested file.`);
         console.error(err);
         exit();
       } else {

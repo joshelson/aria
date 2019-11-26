@@ -11,12 +11,12 @@
 
 twimlActions.Answer = (command, callback) => {
 
-  var call = command.call;
-  var channel = call.channel;
-  var client = call.client;
-  var playback = null;
+  const call = command.call;
+  const channel = call.channel;
+  const client = call.client;
+  const playback = null;
   
-  console.log("Channel " + channel.id + " - Dialing: " + command.value);
+  console.log(`Channel ${channel.id} - Dialing: ${command.value}`);
 
 	setTimeout(() => {
     if (call.hungup) {

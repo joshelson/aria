@@ -12,7 +12,7 @@ twimlActions.Reject = (command, callback) => {
   var client = call.client;
   var playback = null;
   
-  console.log("Channel " + channel.id + " - Reject");
+  console.log(`Channel ${channel.id} - Reject`);
   
   // terminate the call on the next tick
   setTimeout(() => call.terminateCall(), 0);

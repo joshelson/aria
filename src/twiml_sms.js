@@ -17,7 +17,7 @@ twimlActions.Message = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - SMS: " + command.value);
+  console.log(`Channel ${channel.id} - SMS: ${command.value}`);
   
   // TODO: implement SMS message send
   

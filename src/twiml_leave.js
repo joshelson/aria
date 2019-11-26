@@ -14,7 +14,7 @@ twimlActions.Leave = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Leave: NOT YET IMPLEMENTED");
+  console.log(`Channel ${channel.id} - Leave: NOT YET IMPLEMENTED`);
 
   // terminate the call on the next tick
   setTimeout(() => callback(), 0);

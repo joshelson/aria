@@ -41,15 +41,15 @@
 **************************************************************************************/
 (() => {
 
-  var rc = null;   
+  let rc = null;   
 
   // source the configuration
   ariaConfig = require("/etc/asterisk/aria.conf.js");
 
   // initialize local http server for recorded files
-  var recApp = express();
+  const recApp = express();
   recApp.use(express.static(ariaConfig.recordingPath));
-  var recServer = http.createServer(recApp);
+  const recServer = http.createServer(recApp);
   recServer.listen(ariaConfig.recordingPort);
   // TODO: make this secure, at least to some degree
   
@@ -70,13 +70,13 @@
       console.log(util.format("Channel %s - Entered the application", channel.id));
 
       // figure out what technology is in use so we know what to use for routing
-      var ctype = event.channel.name.split("/")[0];
+      const ctype = event.channel.name.split("/")[0];
 
       // SIP Client Call
       if ((ctype === "SIP") || (ctype === "PJSIP")) {
 
         // Route the call based on dialed Number
-        var number = channel.dialplan.exten;
+        let number = channel.dialplan.exten;
 
         // Replace the number with the value of arg[0] if present - FOR TESTING
         if (event.args[0]) {
@@ -84,15 +84,15 @@
         }
 
         // Query redis for the assigned url
-        var lookup = "/numbers/" + number;
-        var app = rc.hgetall(lookup, (err, value) => {
+        const lookup = `/numbers/${number}`;
+        const app = rc.hgetall(lookup, (err, value) => {
           if (err || !value) {
             // log the error to the appropriate facility
 
             // respond with a tri-tone error on the line
           } else {
             // fetch the Twiml from the provided url
-            var call = new AriaCall(client, channel, value.url);
+            const call = new AriaCall(client, channel, value.url);
           }
         });
 
@@ -106,8 +106,8 @@
     }
 
     // handler for StasisEnd event
-    function stasisEnd(event, channel) {
-      console.log(util.format("Channel %s - Left the application", channel.id));
+    function stasisEnd(event, {id}) {
+      console.log(util.format("Channel %s - Left the application", id));
     }
 
     // create a redis client
@@ -120,7 +120,7 @@
 
   console.log("Initializing Aria Twiml actions.");
   Object.keys(twimlActions).forEach(key => {
-    console.log(" - " + key);
+    console.log(` - ${key}`);
   });
   // connect to the local Asterisk server
   // TODO: validate config values

@@ -12,7 +12,7 @@ twimlActions.Unhold = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Hold");
+  console.log(`Channel ${channel.id} - Hold`);
 
   // continue the call on the next tick
   setTimeout(() => callback(), 0);

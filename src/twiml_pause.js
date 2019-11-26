@@ -12,7 +12,7 @@ twimlActions.Pause = (command, callback) => {
   var client = call.client;
   var playback = null;
   
-  console.log("Channel " + channel.id + " - Pausing: " + command.parameters.length);
+  console.log(`Channel ${channel.id} - Pausing: ${command.parameters.length}`);
   
   var timer = null;
   var value = parseInt(command.parameters.length, 10);
@@ -26,7 +26,7 @@ twimlActions.Pause = (command, callback) => {
   
   // set a timer and wait
   timer = setTimeout(() => {
-    console.log("Channel " + channel.id + " - Pause complete");
+    console.log(`Channel ${channel.id} - Pause complete`);
     if (call.hungup) {
       return call.terminateCall();
     } else {

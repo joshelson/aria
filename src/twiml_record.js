@@ -29,7 +29,7 @@ twimlActions.Record = (command, callback) => {
   var fname = uuid.v4();
   
   // log the start
-  console.log("Channel " + channel.id + " - Recording: " + fname + ".wav");
+  console.log(`Channel ${channel.id} - Recording: ${fname}.wav`);
   
   // create parameters for the recording
   var params = {
@@ -48,23 +48,23 @@ twimlActions.Record = (command, callback) => {
   
   channel.record(params, (err, recording) => {
     if (err) {
-      console.log("Error starting recording: " + err.message);
+      console.log(`Error starting recording: ${err.message}`);
       return call.termiateCall();
     }
   
     recording.on("RecordingStarted", (event, rec) => {
-      console.log("Channel " + channel.id + " - Started recording");
+      console.log(`Channel ${channel.id} - Started recording`);
     });
   
     recording.on("RecordingFailed", (event, rec) => {
-      console.log("Channel " + channel.id + " - Recording Failed");
+      console.log(`Channel ${channel.id} - Recording Failed`);
       console.dir(event);
       return callback();
     });
   
     recording.on("RecordingFinished", (event, rec) => {
       var recordEndTime = new Date().getTime();
-      console.log("Channel " + channel.id + " - Finished recording");
+      console.log(`Channel ${channel.id} - Finished recording`);
 
       // send digits to the server, get next XML block
       var method = command.parameters.method || "POST";
@@ -74,9 +74,9 @@ twimlActions.Record = (command, callback) => {
       // TODO: assemble the same basic data that Twilio provides
       
       // Now create the URL for this file so it can be played
-      var local_uri = "recording:" + fname;
+      var local_uri = `recording:${fname}`;
       form.append("RecordingUri", local_uri);
-      form.append("RecordingURL", ariaConfig.serverBaseUrl + fname +".wav");
+      form.append("RecordingURL", `${ariaConfig.serverBaseUrl + fname}.wav`);
       form.append("RecordingDuration", (recordEndTime - recordStartTime));
       form.append("Digits", call.digits);
       return fetchTwiml(method, url, call, form);

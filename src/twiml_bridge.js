@@ -11,13 +11,13 @@ twimlActions.Bridge = (command, callback) => {
   var call = command.call;
   var client = call.client;
   
-  console.log("Channel " + call.originatingChannel.id + " - Bridge");
+  console.log(`Channel ${call.originatingChannel.id} - Bridge`);
 
   // handler for original channel hanging. gracefully hangup the dialed channel
-  var hangupDialed = (channel, dialed) => {
+  var hangupDialed = ({id}, dialed) => {
     console.log(
       "Channel %s - Channel has left the application. Hanging up dialed channel %s",
-      channel.id, dialed.id);
+      id, dialed.id);
 
     // hangup the other end
     dialed.hangup(err => {
@@ -27,10 +27,10 @@ twimlActions.Bridge = (command, callback) => {
   };
 
   // handler for dialed channel hanging up.
-  var hangupOriginal = (channel, dialed) => {
+  var hangupOriginal = (channel, {id}) => {
     console.log(
       "Channel %s - Dialed channel %s has been hung up.",
-      channel.id, dialed.id);
+      channel.id, id);
 
     // hangup the original channel
     channel.hangup(err => {
@@ -70,10 +70,10 @@ twimlActions.Bridge = (command, callback) => {
   };
 
   // handler for the dialed channel leaving Stasis
-  var dialedExit = (dialed, bridge) => {
+  var dialedExit = ({name}, bridge) => {
     console.log(
       "Channel %s - Dialed channel %s has left our application, destroying bridge %s",
-      call.channel.id, dialed.name, bridge.id);
+      call.channel.id, name, bridge.id);
 
     bridge.destroy(err => {
       if (err) {
@@ -83,12 +83,12 @@ twimlActions.Bridge = (command, callback) => {
   };
 
   // handler for new mixing bridge ready for channels to be added to it
-  var addChannelsToBridge = (channel, dialed, bridge) => {
+  var addChannelsToBridge = ({id}, {id}, bridge) => {
     console.log("Channel %s - Adding channel %s and dialed channel %s to bridge %s",
-      channel.id, channel.id, dialed.id, bridge.id);
+      id, id, id, bridge.id);
 
     bridge.addChannel({
-      channel: [channel.id, dialed.id]
+      channel: [id, id]
     }, err => {
       if (err) {
         throw err;

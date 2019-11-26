@@ -14,7 +14,7 @@ twimlActions.Message = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Message: " + command.value + " NOT YET IMPLEMENTED");
+  console.log(`Channel ${channel.id} - Message: ${command.value} NOT YET IMPLEMENTED`);
   
   // TODO: implement Respoke message send
   

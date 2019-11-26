@@ -35,7 +35,7 @@ twimlActions.Say = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Say: " + command.value);
+  console.log(`Channel ${channel.id} - Say: ${command.value}`);
 
   // attach a handler function for digits
   call.digitCallback = (digit, digits) => {
@@ -56,7 +56,7 @@ twimlActions.Say = (command, callback) => {
       }
     });
     channel.play({
-      media: "sound:" + sound
+      media: `sound:${sound}`
     }, playback);
   };
 
@@ -69,7 +69,7 @@ twimlActions.Say = (command, callback) => {
       if (err) {
         exit();
       } else {
-        speech.say(command.value, fileName + ".wav16", err => {
+        speech.say(command.value, `${fileName}.wav16`, err => {
           if (err) {
             exit();
           } else {
@@ -89,7 +89,7 @@ twimlActions.Say = (command, callback) => {
   }
 
   if (!command.value) {
-    console.log("Channel " + channel.id + " - ERROR: No text value provided in 'Say' request.");
+    console.log(`Channel ${channel.id} - ERROR: No text value provided in 'Say' request.`);
     exit();
     return;
   }

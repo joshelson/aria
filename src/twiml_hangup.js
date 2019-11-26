@@ -12,7 +12,7 @@ twimlActions.Hangup = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Hangup");
+  console.log(`Channel ${channel.id} - Hangup`);
 
   // terminate the call on the next tick
   setTimeout(() => {

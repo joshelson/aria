@@ -13,7 +13,7 @@ twimlActions.Redirect = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Redirect: " + command.value);
+  console.log(`Channel ${channel.id} - Redirect: ${command.value}`);
   
   // TODO: implement SMS message send
   

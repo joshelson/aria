@@ -9,24 +9,25 @@
 	generating the application. (The grunt configuration currently does this.)
 	
 ****************************************************************************************/
-var fs = require("fs");
-var url = require("url");
-var md5 = require("md5");
-var http = require('http');
-var path = require("path");
-var util = require("util");
-var redis = require("redis");
-var flite = require("flite");
-var parser = require("xmldoc");
-var uuid = require('node-uuid');
-var ari = require("ari-client");
-var express = require("express");
-var fetch = require("node-fetch");
-fetch.Promise = require("bluebird");
-var download = require("download");
-var formdata = require("form-data");
+import fs from "fs";
 
-var twimlActions = {};
-var ariaConfig = {};
-var rc = redis.createClient();
+import url from "url";
+import md5 from "md5";
+import http from 'http';
+import path from "path";
+import util from "util";
+import redis from "redis";
+import flite from "flite";
+import parser from "xmldoc";
+import uuid from 'node-uuid';
+import ari from "ari-client";
+import express from "express";
+import fetch from "node-fetch";
+fetch.Promise = require("bluebird");
+import download from "download";
+import formdata from "form-data";
+
+const twimlActions = {};
+const ariaConfig = {};
+const rc = redis.createClient();
 
