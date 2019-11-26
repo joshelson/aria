@@ -1324,7 +1324,7 @@ twimlActions.Redirect = function(command, callback) {
   var rc = null;   
 
   // source the configuration
-  ariaConfig = require("/etc/asterisk/aria.conf.js");
+  ariaConfig = require("./config/aria.conf.js");
 
   // initialize local http server for recorded files
   var recApp = express();
