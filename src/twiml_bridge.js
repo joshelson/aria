@@ -6,7 +6,7 @@
     call.originatingChannel and call.dialedChannel.
 
 **************************************************************************************/
-twimlActions.Bridge = function(command, callback) {
+twimlActions.Bridge = (command, callback) => {
 
   var call = command.call;
   var client = call.client;
@@ -14,40 +14,40 @@ twimlActions.Bridge = function(command, callback) {
   console.log("Channel " + call.originatingChannel.id + " - Bridge");
 
   // handler for original channel hanging. gracefully hangup the dialed channel
-  var hangupDialed = function(channel, dialed) {
+  var hangupDialed = (channel, dialed) => {
     console.log(
       "Channel %s - Channel has left the application. Hanging up dialed channel %s",
       channel.id, dialed.id);
 
     // hangup the other end
-    dialed.hangup(function(err) {
+    dialed.hangup(err => {
       // ignore error since dialed channel could have hung up, causing the
       // original channel to exit Stasis
     });
   };
 
   // handler for dialed channel hanging up.
-  var hangupOriginal = function(channel, dialed) {
+  var hangupOriginal = (channel, dialed) => {
     console.log(
       "Channel %s - Dialed channel %s has been hung up.",
       channel.id, dialed.id);
 
     // hangup the original channel
-    channel.hangup(function(err) {
+    channel.hangup(err => {
       // ignore error since original channel could have hung up, causing the
       // dialed channel to exit Stasis
     });
   };
 
   // handler for dialed channel entering Stasis
-  var joinMixingBridge = function(channel, dialed) {
+  var joinMixingBridge = (channel, dialed) => {
     var bridge = client.Bridge();
 
-    dialed.on("StasisEnd", function(event, dialed) {
+    dialed.on("StasisEnd", (event, dialed) => {
       dialedExit(dialed, bridge);
     });
 
-    dialed.answer(function(err) {
+    dialed.answer(err => {
       if (err) {
         throw err; // TODO: trap and handle this.
       }
@@ -58,7 +58,7 @@ twimlActions.Bridge = function(command, callback) {
 
     bridge.create({
       type: "mixing"
-    }, function(err, bridge) {
+    }, (err, bridge) => {
       if (err) {
         throw err; // TODO: trap and handle this.
       }
@@ -70,12 +70,12 @@ twimlActions.Bridge = function(command, callback) {
   };
 
   // handler for the dialed channel leaving Stasis
-  var dialedExit = function(dialed, bridge) {
+  var dialedExit = (dialed, bridge) => {
     console.log(
       "Channel %s - Dialed channel %s has left our application, destroying bridge %s",
       call.channel.id, dialed.name, bridge.id);
 
-    bridge.destroy(function(err) {
+    bridge.destroy(err => {
       if (err) {
         throw err;
       }
@@ -83,13 +83,13 @@ twimlActions.Bridge = function(command, callback) {
   };
 
   // handler for new mixing bridge ready for channels to be added to it
-  var addChannelsToBridge = function(channel, dialed, bridge) {
+  var addChannelsToBridge = (channel, dialed, bridge) => {
     console.log("Channel %s - Adding channel %s and dialed channel %s to bridge %s",
       channel.id, channel.id, dialed.id, bridge.id);
 
     bridge.addChannel({
       channel: [channel.id, dialed.id]
-    }, function(err) {
+    }, err => {
       if (err) {
         throw err;
       }
@@ -99,11 +99,11 @@ twimlActions.Bridge = function(command, callback) {
 
   // rather than registering another handler, perhaps this should hook the active
   // handler provided by the call object?
-  call.originatingChannel.on("StasisEnd", function(event, channel) {
+  call.originatingChannel.on("StasisEnd", (event, channel) => {
     hangupDialed(channel, call.dialedChannel);
   });
 
-  call.dialedChannel.on("ChannelDestroyed", function(event, dialed) {
+  call.dialedChannel.on("ChannelDestroyed", (event, dialed) => {
     hangupOriginal(call.originatingChannel, dialed);
   });
 

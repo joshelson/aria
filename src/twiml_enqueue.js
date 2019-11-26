@@ -7,7 +7,7 @@
     NOT YET IMPLEMENTED
 
 **************************************************************************************/
-twimlActions.Enqueue = function(command, callback) {
+twimlActions.Enqueue = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -17,9 +17,7 @@ twimlActions.Enqueue = function(command, callback) {
   console.log("Channel " + channel.id + " - Enqueue: NOT YET IMPLEMENTED");
 
   // terminate the call on the next tick
-  setTimeout(function() {
-    return callback();
-  }, 0);
+  setTimeout(() => callback(), 0);
 
 };
 

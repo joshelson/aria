@@ -9,7 +9,7 @@
 
 **************************************************************************************/
 
-twimlActions.Answer = function(command, callback) {
+twimlActions.Answer = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -18,7 +18,7 @@ twimlActions.Answer = function(command, callback) {
   
   console.log("Channel " + channel.id + " - Dialing: " + command.value);
 
-	setTimeout(function() {
+	setTimeout(() => {
     if (call.hungup) {
       return call.terminateCall();
     } else {

@@ -11,7 +11,7 @@
     Nested Elements
     
 **************************************************************************************/
-twimlActions.Gather = function(command, callback) {
+twimlActions.Gather = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -31,14 +31,14 @@ twimlActions.Gather = function(command, callback) {
   call.maxDigits = parseInt(command.parameters.numDigits, 10) || 0;
   call.termDigit = command.parameters.finishOnKey || "#";
 
-  var collectDigits = function() {
+  var collectDigits = () => {
     // if the buffer already has enough we can move on...
     if ((call.maxDigits > 0) && (call.digits.length >= call.maxDigits)) {
       return doneCollecting();
     }
 
     // otherwise set a callback for digit events
-    call.digitCallback = function(digit, digits) {
+    call.digitCallback = (digit, digits) => {
       if (digit === call.termDigit) {
         // done - received term digit;
         doneCollecting();
@@ -49,7 +49,7 @@ twimlActions.Gather = function(command, callback) {
       }
     };
 
-    call.hangupCallback = function() {
+    call.hangupCallback = () => {
       doneCollecting();
     };
 
@@ -57,7 +57,7 @@ twimlActions.Gather = function(command, callback) {
     timer = setTimeout(doneCollecting, timeout * 1000);
   };
 
-  var doneCollecting = function(digits) {
+  var doneCollecting = digits => {
 
     call.digitCallback = null;
     call.hangupCallback = null;
@@ -107,7 +107,7 @@ twimlActions.Gather = function(command, callback) {
   var child = command.children;
 
   // run the nested child action if it is valid
-  var runChild = function() {
+  var runChild = () => {
     // bail if the call has been hung up
     if (call.hungup) {
       return call.terminateCall();
@@ -129,7 +129,7 @@ twimlActions.Gather = function(command, callback) {
   };
 
   // move the pointer to the next child and play it, otherwise start gathering
-  var nextChild = function() {
+  var nextChild = () => {
     if ((child.next) && (call.digits.length === 0)) {
       child = child.next;
       runChild();

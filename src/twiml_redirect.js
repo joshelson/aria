@@ -6,7 +6,7 @@
     with the result.
 
 **************************************************************************************/
-twimlActions.Redirect = function(command, callback) {
+twimlActions.Redirect = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -18,7 +18,7 @@ twimlActions.Redirect = function(command, callback) {
   // TODO: implement SMS message send
   
   // go on to the next action
-  setTimeout(function() {
+  setTimeout(() => {
     try {
       var method = command.parameters.method || "POST";
       var redirectURL = null;

@@ -5,7 +5,7 @@
     End a call.
 
 **************************************************************************************/
-twimlActions.Hangup = function(command, callback) {
+twimlActions.Hangup = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -15,7 +15,7 @@ twimlActions.Hangup = function(command, callback) {
   console.log("Channel " + channel.id + " - Hangup");
 
   // terminate the call on the next tick
-  setTimeout(function() {
+  setTimeout(() => {
     call.hungup = true;
     channel.hangup();
     return call.terminateCall();

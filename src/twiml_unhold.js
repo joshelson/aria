@@ -5,7 +5,7 @@
     Unhold a held call leg.
 
 **************************************************************************************/
-twimlActions.Unhold = function(command, callback) {
+twimlActions.Unhold = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -15,9 +15,7 @@ twimlActions.Unhold = function(command, callback) {
   console.log("Channel " + channel.id + " - Hold");
 
   // continue the call on the next tick
-  setTimeout(function() {
-    return callback();
-  }, 0);
+  setTimeout(() => callback(), 0);
 
 };
 

@@ -14,7 +14,7 @@
     
 **************************************************************************************/
 
-var makeAction = function(xml, parent) {
+var makeAction = (xml, parent) => {
 
   var action = {};
 
@@ -45,7 +45,7 @@ var makeAction = function(xml, parent) {
 };
 
 // make subsequent requests, optionally passing back data
-var fetchTwiml = function(method, twimlURL, call, data) {
+var fetchTwiml = (method, twimlURL, call, data) => {
 
   console.log("Fetching Twiml From: " + twimlURL);
   
@@ -60,9 +60,7 @@ var fetchTwiml = function(method, twimlURL, call, data) {
   }
   
   fetch(twimlURL, options)
-    .then(function(res) {
-      return res.text();
-    }).then(function(twiml) {
+    .then(res => res.text()).then(twiml => {
       // create the linked list of actions to execute
       var first = null;
       var last = null;
@@ -75,7 +73,7 @@ console.log(twiml);
 
       // parse the xml and create a new stack
       var xml = new parser.XmlDocument(twiml);
-      xml.eachChild(function(command, index, array) {
+      xml.eachChild((command, index, array) => {
 
         var action = makeAction(command, call);
         if (!call.stack) {
@@ -94,7 +92,7 @@ console.log(twiml);
 };
 
 // load up a form data object with standard call parameters
-var setCallData = function(call, form) {
+var setCallData = (call, form) => {
   form.append("CallSid", call.sid);
   form.append("AccountSid", "aria-call"); // perhaps use local IP or hostname?
   form.append("From", call.from);
@@ -139,7 +137,7 @@ function AriaCall(client, channel, url, twiml, done) {
   this.sid = uuid.v4();
   
   // advance to the next action in the list
-  this.advancePointer = function() {
+  this.advancePointer = () => {
     if (that.stack.next) {
       that.stack = that.stack.next;
       that.processCall();
@@ -148,7 +146,7 @@ function AriaCall(client, channel, url, twiml, done) {
     }
   };
 
-  channel.on("ChannelDtmfReceived", function(evt, channel) {
+  channel.on("ChannelDtmfReceived", (evt, channel) => {
     console.log("Channel " + channel.id + " - Digit: " + evt.digit);
     that.digits += evt.digit;
     if (that.digitCallback) {
@@ -156,7 +154,7 @@ function AriaCall(client, channel, url, twiml, done) {
     }
   });
 
-  channel.on("ChannelHangupRequest", function(evt, channel) {
+  channel.on("ChannelHangupRequest", (evt, channel) => {
     console.log("Channel " + channel.id + " - Hangup Request");
     that.hungup = true;
     if (that.hangupCallback) {

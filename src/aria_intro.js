@@ -9,7 +9,6 @@
 	generating the application. (The grunt configuration currently does this.)
 	
 ****************************************************************************************/
-"use strict";
 var fs = require("fs");
 var url = require("url");
 var md5 = require("md5");

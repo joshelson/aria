@@ -39,7 +39,7 @@
 	See the README.md file or the wiki for more information on configuring Aria.
 	
 **************************************************************************************/
-(function() {
+(() => {
 
   var rc = null;   
 
@@ -85,7 +85,7 @@
 
         // Query redis for the assigned url
         var lookup = "/numbers/" + number;
-        var app = rc.hgetall(lookup, function(err, value) {
+        var app = rc.hgetall(lookup, (err, value) => {
           if (err || !value) {
             // log the error to the appropriate facility
 
@@ -119,11 +119,11 @@
   }
 
   console.log("Initializing Aria Twiml actions.");
-  Object.keys(twimlActions).forEach(function(key) {
+  Object.keys(twimlActions).forEach(key => {
     console.log(" - " + key);
   });
   // connect to the local Asterisk server
   // TODO: validate config values
   ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded);
-}());
+})();
 

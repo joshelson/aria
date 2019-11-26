@@ -28,7 +28,7 @@
     nested in the Gather verb.
 
 **************************************************************************************/
-twimlActions.Say = function(command, callback) {
+twimlActions.Say = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -38,7 +38,7 @@ twimlActions.Say = function(command, callback) {
   console.log("Channel " + channel.id + " - Say: " + command.value);
 
   // attach a handler function for digits
-  call.digitCallback = function(digit, digits) {
+  call.digitCallback = (digit, digits) => {
     if (playback) {
       if (command.parameters.termDigits &&
         (command.parameters.termDigits.indexOf(digit) > -1)) {
@@ -47,9 +47,9 @@ twimlActions.Say = function(command, callback) {
     }
   };
 
-  var play = function(sound, done) {
+  var play = (sound, done) => {
     playback = client.Playback();
-    playback.on("PlaybackFinished", function(event, cp) {
+    playback.on("PlaybackFinished", (event, cp) => {
       playback = null;
       if (done) {
         done();
@@ -65,11 +65,11 @@ twimlActions.Say = function(command, callback) {
     var options = {
       voice: "slt"
     };
-    flite(options, function(err, speech) {
+    flite(options, (err, speech) => {
       if (err) {
         exit();
       } else {
-        speech.say(command.value, fileName + ".wav16", function(err) {
+        speech.say(command.value, fileName + ".wav16", err => {
           if (err) {
             exit();
           } else {
@@ -97,7 +97,7 @@ twimlActions.Say = function(command, callback) {
   var hashName = md5(command.value);
   var fileName = path.join(ariaConfig.audioPath, hashName);
 
-  fs.exists(fileName, function(exists) {
+  fs.exists(fileName, exists => {
     if (exists) {
       play(hashName, exit);
     } else {

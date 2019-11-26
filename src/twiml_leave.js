@@ -7,7 +7,7 @@
     NOT YET IMPLEMENTED
 
 **************************************************************************************/
-twimlActions.Leave = function(command, callback) {
+twimlActions.Leave = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -17,9 +17,7 @@ twimlActions.Leave = function(command, callback) {
   console.log("Channel " + channel.id + " - Leave: NOT YET IMPLEMENTED");
 
   // terminate the call on the next tick
-  setTimeout(function() {
-    return callback();
-  }, 0);
+  setTimeout(() => callback(), 0);
 
 };
 

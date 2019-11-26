@@ -6,7 +6,7 @@
     additional instructions.
 
 **************************************************************************************/
-twimlActions.Record = function(command, callback) {
+twimlActions.Record = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -22,7 +22,7 @@ twimlActions.Record = function(command, callback) {
   // terminate recording on which tones?
   var finishOnKey = command.parameters.finishOnKey || "any";
   
-  call.hangupCallback = function() {
+  call.hangupCallback = () => {
     console.log("Call hung up!");
   }
   
@@ -46,23 +46,23 @@ twimlActions.Record = function(command, callback) {
   // start the recording process
   var recordStartTime = new Date().getTime();
   
-  channel.record(params, function(err, recording) {
+  channel.record(params, (err, recording) => {
     if (err) {
       console.log("Error starting recording: " + err.message);
       return call.termiateCall();
     }
   
-    recording.on("RecordingStarted", function(event, rec) {
+    recording.on("RecordingStarted", (event, rec) => {
       console.log("Channel " + channel.id + " - Started recording");
     });
   
-    recording.on("RecordingFailed", function(event, rec) {
+    recording.on("RecordingFailed", (event, rec) => {
       console.log("Channel " + channel.id + " - Recording Failed");
       console.dir(event);
       return callback();
     });
   
-    recording.on("RecordingFinished", function(event, rec) {
+    recording.on("RecordingFinished", (event, rec) => {
       var recordEndTime = new Date().getTime();
       console.log("Channel " + channel.id + " - Finished recording");
 

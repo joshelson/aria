@@ -7,7 +7,7 @@
     NOT YET IMPLEMENTED
     
 **************************************************************************************/
-twimlActions.Message = function(command, callback) {
+twimlActions.Message = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -19,9 +19,7 @@ twimlActions.Message = function(command, callback) {
   // TODO: implement Respoke message send
   
   // go on to the next action
-  setTimeout(function() {
-    return callback();
-  }, 0);
+  setTimeout(() => callback(), 0);
 
 };
 

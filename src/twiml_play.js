@@ -32,7 +32,7 @@
     Redis) that can be sent along with the download request.
 
 **************************************************************************************/
-twimlActions.Play = function(command, callback) {
+twimlActions.Play = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -42,7 +42,7 @@ twimlActions.Play = function(command, callback) {
   console.log("Channel " + channel.id + " - Playing: " + command.value);
 
   // attach a handler function for digits
-  call.digitCallback = function(digit, digits) {
+  call.digitCallback = (digit, digits) => {
     if (playback) {
       if (command.parameters.termDigits &&
         (command.parameters.termDigits.indexOf(digit) > -1)) {
@@ -52,9 +52,9 @@ twimlActions.Play = function(command, callback) {
   };
 
   // play back the sound file
-  var play = function(sound, done) {
+  var play = (sound, done) => {
     playback = client.Playback();
-    playback.on("PlaybackFinished", function(event, cp) {
+    playback.on("PlaybackFinished", (event, cp) => {
       playback = null;
       if (done) {
         done();
@@ -66,7 +66,7 @@ twimlActions.Play = function(command, callback) {
   };
 
   // exit, calling the provided callback
-  var exit = function() {
+  var exit = () => {
     if (call.hungup) {
       return call.terminateCall();
     } else {
@@ -128,7 +128,7 @@ twimlActions.Play = function(command, callback) {
   dl.get(fileURL.href)
     .dest(ariaConfig.audioPath)
     .rename(fileName)
-    .run(function(err, files) {
+    .run((err, files) => {
       if (err) {
         console.log("Channel " + channel.id + " - ERROR: Unable to download requested file.");
         console.error(err);

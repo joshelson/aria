@@ -5,7 +5,7 @@
     Hold the active call leg.
 
 **************************************************************************************/
-twimlActions.Hold = function(command, callback) {
+twimlActions.Hold = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -17,20 +17,18 @@ twimlActions.Hold = function(command, callback) {
 
   // find or create a holding bridge
   
-  client.bridges.list(function(err, bridges) {
+  client.bridges.list((err, bridges) => {
     if (err) {
       throw err;
     }
 
-    bridge = bridges.filter(function(candidate) {
-      return candidate.bridge_type === 'holding';
-    })[0];
+    bridge = bridges.filter(candidate => candidate.bridge_type === 'holding')[0];
 
     if (bridge) {
       console.log(util.format('Using bridge %s', bridge.id));
       start();
     } else {
-      client.bridges.create({type: 'holding'}, function(err, newBridge) {
+      client.bridges.create({type: 'holding'}, (err, newBridge) => {
         if (err) {
           throw err;
         }
@@ -42,14 +40,14 @@ twimlActions.Hold = function(command, callback) {
   });
 
   // continue the call on the next tick
-  var start = function() {
-    setTimeout(function() {
-      bridge.addChannel({channel: channel.id}, function(err) {
+  var start = () => {
+    setTimeout(() => {
+      bridge.addChannel({channel: channel.id}, err => {
         if (err) {
           throw err;
         }
 
-        bridge.startMoh(function(err) {
+        bridge.startMoh(err => {
           if (err) {
             throw err;
           }

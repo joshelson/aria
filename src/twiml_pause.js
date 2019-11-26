@@ -5,7 +5,7 @@
     Wait for a number of seconds
 
 **************************************************************************************/
-twimlActions.Pause = function(command, callback) {
+twimlActions.Pause = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -17,7 +17,7 @@ twimlActions.Pause = function(command, callback) {
   var timer = null;
   var value = parseInt(command.parameters.length, 10);
   
-  call.hangupCallback = function() {
+  call.hangupCallback = () => {
     if (timer) {
       clearTimeout(timer);
       call.hangupCallback = null;
@@ -25,7 +25,7 @@ twimlActions.Pause = function(command, callback) {
   };
   
   // set a timer and wait
-  timer = setTimeout(function() {
+  timer = setTimeout(() => {
     console.log("Channel " + channel.id + " - Pause complete");
     if (call.hungup) {
       return call.terminateCall();
