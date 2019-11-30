@@ -125,5 +125,6 @@
   // connect to the local Asterisk server
   // TODO: validate config values
   ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded);
+  console.log("Connected to Aria Twiml.");
 })();
 

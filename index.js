@@ -1326,6 +1326,10 @@ twimlActions.Redirect = (command, callback) => {
   // initialize local http server for recorded files
   const recApp = express();
   recApp.use(express.static(ariaConfig.recordingPath));
+
+  console.log(`Serving static files in /ml for ${ariaConfig.mlPath}`); 
+  recApp.use('/ml', express.static(ariaConfig.mlPath));
+  
   const recServer = http.createServer(recApp);
   recServer.listen(ariaConfig.recordingPort);
   // TODO: make this secure, at least to some degree
@@ -1392,15 +1396,37 @@ twimlActions.Redirect = (command, callback) => {
 
     client.on("StasisStart", stasisStart);
     client.on("StasisEnd", stasisEnd);
+
+    console.log(`Registering aria Stasis application`);
     client.start("aria");
   }
 
-  console.log("Initializing Aria Twiml actions.");
+  console.log("* Initializing Aria Twiml actions. *");
   Object.keys(twimlActions).forEach(key => {
     console.log(` - ${key}`);
   });
   // connect to the local Asterisk server
   // TODO: validate config values
-  ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded);
+  // ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded)
+
+  console.log(`Attempting to Instantiate Aria Twiml on ${ariaConfig.asterisk} | user: ${ariaConfig.username}`);
+  
+  ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded)
+    .then(function (ari) {
+       console.log(`Connected to Aria Twiml on ${ariaConfig.asterisk} | user: ${ariaConfig.username}`);
+	ari.asterisk.getInfo()
+	  .then(function (asteriskinfo) { console.log(asteriskinfo)})
+	  .catch(function (err) {});
+     })
+    .catch(function (err) {
+       console.log(`Error connecting to ARI is '${err}'`);
+     });
+
+  /*
+  ari.asterisk.getInfo()
+  .then(function (asteriskinfo) { console.log(asteriskinfo)})
+  .catch(function (err) {});
+  */
+
 })();
 

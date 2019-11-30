@@ -69,6 +69,10 @@ To run the app without grunt, simply type:
 
     node index.js
     
+To debug Express, run:
+
+    DEBUG=express:* node index.js 
+
 ### Redis
 
 Ultimately I hope to add a small Express application to provide a simple web API and
