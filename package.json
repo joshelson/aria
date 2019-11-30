@@ -2,6 +2,7 @@
   "name": "aria",
   "version": "0.1.0",
   "author": "Steve Sokol",
+  "type": "module",
   "devDependencies": {
     "grunt": "~1.0.4",
     "grunt-contrib-jshint": "~2.1.0",

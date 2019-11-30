@@ -9,27 +9,30 @@
 	generating the application. (The grunt configuration currently does this.)
 	
 ****************************************************************************************/
-"use strict";
-var fs = require("fs");
-var url = require("url");
-var md5 = require("md5");
-var http = require('http');
-var path = require("path");
-var util = require("util");
-var redis = require("redis");
-var flite = require("flite");
-var parser = require("xmldoc");
-var uuid = require('node-uuid');
-var ari = require("ari-client");
-var express = require("express");
-var fetch = require("node-fetch");
-fetch.Promise = require("bluebird");
-var download = require("download");
-var formdata = require("form-data");
+import fs from "fs";
 
-var twimlActions = {};
-var ariaConfig = {};
-var rc = redis.createClient();
+import url from "url";
+import md5 from "md5";
+import http from 'http';
+import path from "path";
+import util from "util";
+import redis from "redis";
+import flite from "flite";
+import parser from "xmldoc";
+import uuid from 'node-uuid';
+import ari from "ari-client";
+import express from "express";
+import fetch from "node-fetch";
+import download from "download";
+import formdata from "form-data";
+
+import * as Promise from "bluebird";
+
+import ariaConfig from "./config/aria.conf.js";
+
+const twimlActions = {};
+// const ariaConfig = {};
+const rc = redis.createClient();
 
 ;/**************************************************************************************
 
@@ -47,22 +50,22 @@ var rc = redis.createClient();
     
 **************************************************************************************/
 
-var makeAction = function(xml, parent) {
+const makeAction = ({name, val, attr, children}, parent) => {
 
-  var action = {};
+  const action = {};
 
-  action.name = xml.name;
-  action.value = xml.val.trim();
-  action.parameters = xml.attr;
+  action.name = name;
+  action.value = val.trim();
+  action.parameters = attr;
   action.call = parent;
   action.next = null;
   action.children = null;
 
-  var lastChild = null;
-  if (xml.children && xml.children.length > 0) {
-    for (var i = 0; i < xml.children.length; i = i + 1) {
-      var x = xml.children[i];
-      var a = makeAction(x, parent);
+  let lastChild = null;
+  if (children && children.length > 0) {
+    for (let i = 0; i < children.length; i = i + 1) {
+      const x = children[i];
+      const a = makeAction(x, parent);
       if (!action.children) {
         action.children = a;
         lastChild = a;
@@ -78,27 +81,25 @@ var makeAction = function(xml, parent) {
 };
 
 // make subsequent requests, optionally passing back data
-var fetchTwiml = function(method, twimlURL, call, data) {
+const fetchTwiml = (method, twimlURL, call, data) => {
 
-  console.log("Fetching Twiml From: " + twimlURL);
+  console.log(`Fetching Twiml From: ${twimlURL}`);
   
-  var options = {
+  const options = {
     method: method || "POST",
     body: data || null
   };
 
-  var elements = url.parse(twimlURL);
+  const elements = url.parse(twimlURL);
   if (!elements.protocol) {
     twimlURL = url.resolve(call.baseUrl, twimlURL);
   }
   
   fetch(twimlURL, options)
-    .then(function(res) {
-      return res.text();
-    }).then(function(twiml) {
+    .then(res => res.text()).then(twiml => {
       // create the linked list of actions to execute
-      var first = null;
-      var last = null;
+      const first = null;
+      let last = null;
 
       // wipe out the old stack
       call.stack = null;
@@ -107,10 +108,10 @@ console.log("XML Body:");
 console.log(twiml);
 
       // parse the xml and create a new stack
-      var xml = new parser.XmlDocument(twiml);
-      xml.eachChild(function(command, index, array) {
+      const xml = new parser.XmlDocument(twiml);
+      xml.eachChild((command, index, {length}) => {
 
-        var action = makeAction(command, call);
+        const action = makeAction(command, call);
         if (!call.stack) {
           call.stack = action;
           last = action;
@@ -118,7 +119,7 @@ console.log(twiml);
           last.next = action;
           last = action;
         }
-        if (index === (array.length - 1)) {
+        if (index === (length - 1)) {
           last.next = null;
           call.processCall();
         }
@@ -127,106 +128,107 @@ console.log(twiml);
 };
 
 // load up a form data object with standard call parameters
-var setCallData = function(call, form) {
-  form.append("CallSid", call.sid);
+const setCallData = ({sid, from, to, status}, form) => {
+  form.append("CallSid", sid);
   form.append("AccountSid", "aria-call"); // perhaps use local IP or hostname?
-  form.append("From", call.from);
-  form.append("To", call.to);
-  form.append("CallStatus", call.status);
+  form.append("From", from);
+  form.append("To", to);
+  form.append("CallStatus", status);
   form.append("ApiVersion", "0.0.1");
   form.append("Direction", "inbound"); // TODO: fix this to reflect actual call direction
   form.append("ForwardedFrom", ""); // TODO: fix this too
   form.append("CallerName", ""); // TODO: and this
-}
+};
 
-function AriaCall(client, channel, url, twiml, done) {
+class AriaCall {
+  constructor(client, channel, url, twiml, done) {
 
-  var that = this;
+    const that = this;
 
-  this.client = client; // a reference to the ARI client
-  this.baseUrl = url; // the base URL from whence the Twiml was fetched
-  this.stack = null; // the call stack 
+    this.client = client; // a reference to the ARI client
+    this.baseUrl = url; // the base URL from whence the Twiml was fetched
+    this.stack = null; // the call stack 
 
-  this.originatingChannel = channel; // the channel that originated the call (incoming)
-  this.dialedChannel = null; // the dialed channel (if any) for the call
-  
-  this.channel = this.originatingChannel; // the active channel object for the call
-  
-  this.playback = null; // the placeholder for an active playback object
-  this.stopOnTone = false; // should the playback be stopped when a tone is received?
+    this.originatingChannel = channel; // the channel that originated the call (incoming)
+    this.dialedChannel = null; // the dialed channel (if any) for the call
+    
+    this.channel = this.originatingChannel; // the active channel object for the call
+    
+    this.playback = null; // the placeholder for an active playback object
+    this.stopOnTone = false; // should the playback be stopped when a tone is received?
 
-  this.digits = "";
-  this.digitTimer = null; // timer used to wait for digits;
-  this.maxDigits = 0; // maximum number of digits to collect
-  this.termDigit = "#"; // digit used to signal end of collection
-  this.digitCallback = null; // callback on digit collection
+    this.digits = "";
+    this.digitTimer = null; // timer used to wait for digits;
+    this.maxDigits = 0; // maximum number of digits to collect
+    this.termDigit = "#"; // digit used to signal end of collection
+    this.digitCallback = null; // callback on digit collection
 
-  this.hungup = false; // hangup flag
-  this.hangupCallback = null; // callback on hangup
+    this.hungup = false; // hangup flag
+    this.hangupCallback = null; // callback on hangup
 
-  this.from = channel.caller.number;
-  this.to = "";
-  this.createTime = new Date().getTime();
-  this.status = "Awesome";
-  
-  this.sid = uuid.v4();
-  
-  // advance to the next action in the list
-  this.advancePointer = function() {
-    if (that.stack.next) {
-      that.stack = that.stack.next;
-      that.processCall();
+    this.from = channel.caller.number;
+    this.to = "";
+    this.createTime = new Date().getTime();
+    this.status = "Awesome";
+    
+    this.sid = uuid.v4();
+    
+    // advance to the next action in the list
+    this.advancePointer = () => {
+      if (that.stack.next) {
+        that.stack = that.stack.next;
+        that.processCall();
+      } else {
+        that.terminateCall();
+      }
+    };
+
+    channel.on("ChannelDtmfReceived", ({digit}, {id}) => {
+      console.log(`Channel ${id} - Digit: ${digit}`);
+      that.digits += digit;
+      if (that.digitCallback) {
+        that.digitCallback(digit, that.digits);
+      }
+    });
+
+    channel.on("ChannelHangupRequest", (evt, {id}) => {
+      console.log(`Channel ${id} - Hangup Request`);
+      that.hungup = true;
+      if (that.hangupCallback) {
+        that.hangupCallback();
+      }
+    });
+
+    // fetch the Twiml for this call
+    fetchTwiml("GET", url, that, null);
+
+  }
+
+  processCall() {
+    const command = this.stack;
+    const action = twimlActions[command.name];
+    if (!action) {
+      console.log(`Invalid or improper command: ${command.name}`);
+      this.terminateCall();
     } else {
-      that.terminateCall();
+      action(command, command.call.advancePointer);
     }
-  };
+  }
 
-  channel.on("ChannelDtmfReceived", function(evt, channel) {
-    console.log("Channel " + channel.id + " - Digit: " + evt.digit);
-    that.digits += evt.digit;
-    if (that.digitCallback) {
-      that.digitCallback(evt.digit, that.digits);
+  terminateCall() {
+    // post the call record to the account's call history URI if set;
+    // do other post-call stuff here
+    const milliseconds = new Date().getTime();
+    console.log(`Channel ${this.channel.id} - Call duration: ${milliseconds - this.createTime}ms`);
+    if (!this.hungup) {
+      try {
+        this.channel.hangup();
+      } catch (e) {
+        // must have already hung up
+      }
     }
-  });
-
-  channel.on("ChannelHangupRequest", function(evt, channel) {
-    console.log("Channel " + channel.id + " - Hangup Request");
-    that.hungup = true;
-    if (that.hangupCallback) {
-      that.hangupCallback();
-    }
-  });
-
-  // fetch the Twiml for this call
-  fetchTwiml("GET", url, that, null);
-
+  }
 }
-
-
-AriaCall.prototype.processCall = function() {
-  var command = this.stack;
-  var action = twimlActions[command.name];
-  if (!action) {
-    console.log("Invalid or improper command: " + command.name);
-    this.terminateCall();
-  } else {
-    action(command, command.call.advancePointer);
-  }
-};
-
-AriaCall.prototype.terminateCall = function() {
-  // post the call record to the account's call history URI if set;
-  // do other post-call stuff here
-  var milliseconds = new Date().getTime();
-  console.log("Channel " + this.channel.id + " - Call duration: " + (milliseconds - this.createTime) + "ms");
-  if (!this.hungup) {
-    try {
-      this.channel.hangup();
-    } catch (e) {
-      // must have already hung up
-    }
-  }
-};
 
 
 
@@ -241,16 +243,16 @@ AriaCall.prototype.terminateCall = function() {
 
 **************************************************************************************/
 
-twimlActions.Answer = function(command, callback) {
+twimlActions.Answer = (command, callback) => {
 
-  var call = command.call;
-  var channel = call.channel;
-  var client = call.client;
-  var playback = null;
+  const call = command.call;
+  const channel = call.channel;
+  const client = call.client;
+  const playback = null;
   
-  console.log("Channel " + channel.id + " - Dialing: " + command.value);
+  console.log(`Channel ${channel.id} - Dialing: ${command.value}`);
 
-	setTimeout(function() {
+	setTimeout(() => {
     if (call.hungup) {
       return call.terminateCall();
     } else {
@@ -291,17 +293,17 @@ twimlActions.Answer = function(command, callback) {
     nested in the Gather verb.
 
 **************************************************************************************/
-twimlActions.Say = function(command, callback) {
+twimlActions.Say = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Say: " + command.value);
+  console.log(`Channel ${channel.id} - Say: ${command.value}`);
 
   // attach a handler function for digits
-  call.digitCallback = function(digit, digits) {
+  call.digitCallback = (digit, digits) => {
     if (playback) {
       if (command.parameters.termDigits &&
         (command.parameters.termDigits.indexOf(digit) > -1)) {
@@ -310,16 +312,16 @@ twimlActions.Say = function(command, callback) {
     }
   };
 
-  var play = function(sound, done) {
+  var play = (sound, done) => {
     playback = client.Playback();
-    playback.on("PlaybackFinished", function(event, cp) {
+    playback.on("PlaybackFinished", (event, cp) => {
       playback = null;
       if (done) {
         done();
       }
     });
     channel.play({
-      media: "sound:" + sound
+      media: `sound:${sound}`
     }, playback);
   };
 
@@ -328,11 +330,11 @@ twimlActions.Say = function(command, callback) {
     var options = {
       voice: "slt"
     };
-    flite(options, function(err, speech) {
+    flite(options, (err, speech) => {
       if (err) {
         exit();
       } else {
-        speech.say(command.value, fileName + ".wav16", function(err) {
+        speech.say(command.value, `${fileName}.wav16`, err => {
           if (err) {
             exit();
           } else {
@@ -352,7 +354,7 @@ twimlActions.Say = function(command, callback) {
   }
 
   if (!command.value) {
-    console.log("Channel " + channel.id + " - ERROR: No text value provided in 'Say' request.");
+    console.log(`Channel ${channel.id} - ERROR: No text value provided in 'Say' request.`);
     exit();
     return;
   }
@@ -360,7 +362,7 @@ twimlActions.Say = function(command, callback) {
   var hashName = md5(command.value);
   var fileName = path.join(ariaConfig.audioPath, hashName);
 
-  fs.exists(fileName, function(exists) {
+  fs.exists(fileName, exists => {
     if (exists) {
       play(hashName, exit);
     } else {
@@ -404,17 +406,17 @@ twimlActions.Say = function(command, callback) {
     Redis) that can be sent along with the download request.
 
 **************************************************************************************/
-twimlActions.Play = function(command, callback) {
+twimlActions.Play = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Playing: " + command.value);
+  console.log(`Channel ${channel.id} - Playing: ${command.value}`);
 
   // attach a handler function for digits
-  call.digitCallback = function(digit, digits) {
+  call.digitCallback = (digit, digits) => {
     if (playback) {
       if (command.parameters.termDigits &&
         (command.parameters.termDigits.indexOf(digit) > -1)) {
@@ -424,21 +426,21 @@ twimlActions.Play = function(command, callback) {
   };
 
   // play back the sound file
-  var play = function(sound, done) {
+  var play = (sound, done) => {
     playback = client.Playback();
-    playback.on("PlaybackFinished", function(event, cp) {
+    playback.on("PlaybackFinished", (event, cp) => {
       playback = null;
       if (done) {
         done();
       }
     });
     channel.play({
-      media: "sound:" + sound
+      media: `sound:${sound}`
     }, playback);
   };
 
   // exit, calling the provided callback
-  var exit = function() {
+  var exit = () => {
     if (call.hungup) {
       return call.terminateCall();
     } else {
@@ -500,9 +502,9 @@ twimlActions.Play = function(command, callback) {
   dl.get(fileURL.href)
     .dest(ariaConfig.audioPath)
     .rename(fileName)
-    .run(function(err, files) {
+    .run((err, files) => {
       if (err) {
-        console.log("Channel " + channel.id + " - ERROR: Unable to download requested file.");
+        console.log(`Channel ${channel.id} - ERROR: Unable to download requested file.`);
         console.error(err);
         exit();
       } else {
@@ -525,13 +527,13 @@ twimlActions.Play = function(command, callback) {
     Nested Elements
     
 **************************************************************************************/
-twimlActions.Gather = function(command, callback) {
+twimlActions.Gather = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
 
-  console.log("Channel " + channel.id + " - Gathering: " + command.value);
+  console.log(`Channel ${channel.id} - Gathering: ${command.value}`);
 
   var timeout = command.parameters.timeout || 5;
   var timer = null;
@@ -545,25 +547,25 @@ twimlActions.Gather = function(command, callback) {
   call.maxDigits = parseInt(command.parameters.numDigits, 10) || 0;
   call.termDigit = command.parameters.finishOnKey || "#";
 
-  var collectDigits = function() {
+  var collectDigits = () => {
     // if the buffer already has enough we can move on...
     if ((call.maxDigits > 0) && (call.digits.length >= call.maxDigits)) {
       return doneCollecting();
     }
 
     // otherwise set a callback for digit events
-    call.digitCallback = function(digit, digits) {
+    call.digitCallback = (digit, {length}) => {
       if (digit === call.termDigit) {
         // done - received term digit;
         doneCollecting();
       } else
-      if ((call.maxDigits > 0) && (digits.length >= call.maxDigits)) {
+      if ((call.maxDigits > 0) && (length >= call.maxDigits)) {
         // done - hit max length
         doneCollecting();
       }
     };
 
-    call.hangupCallback = function() {
+    call.hangupCallback = () => {
       doneCollecting();
     };
 
@@ -571,7 +573,7 @@ twimlActions.Gather = function(command, callback) {
     timer = setTimeout(doneCollecting, timeout * 1000);
   };
 
-  var doneCollecting = function(digits) {
+  var doneCollecting = digits => {
 
     call.digitCallback = null;
     call.hangupCallback = null;
@@ -580,7 +582,7 @@ twimlActions.Gather = function(command, callback) {
     var returnDigits = call.digits;
     call.digits = "";
     
-    console.log("Channel " + channel.id + " - Done gathering. Collected: " + returnDigits);
+    console.log(`Channel ${channel.id} - Done gathering. Collected: ${returnDigits}`);
     
     // clear the timer
     if (timer) {
@@ -621,7 +623,7 @@ twimlActions.Gather = function(command, callback) {
   var child = command.children;
 
   // run the nested child action if it is valid
-  var runChild = function() {
+  var runChild = () => {
     // bail if the call has been hung up
     if (call.hungup) {
       return call.terminateCall();
@@ -629,7 +631,7 @@ twimlActions.Gather = function(command, callback) {
 
     // move past any verbs other than Play or Say
     while ((child) && ((child.name !== "Play") && (child.name !== "Say"))) {
-      console.log("Channel " + channel.id + " - Invalid nested verb: " + child.name + ". Skipped");
+      console.log(`Channel ${channel.id} - Invalid nested verb: ${child.name}. Skipped`);
       child = child.next;
     }
     if (child) {
@@ -643,7 +645,7 @@ twimlActions.Gather = function(command, callback) {
   };
 
   // move the pointer to the next child and play it, otherwise start gathering
-  var nextChild = function() {
+  var nextChild = () => {
     if ((child.next) && (call.digits.length === 0)) {
       child = child.next;
       runChild();
@@ -668,19 +670,19 @@ twimlActions.Gather = function(command, callback) {
     Wait for a number of seconds
 
 **************************************************************************************/
-twimlActions.Pause = function(command, callback) {
+twimlActions.Pause = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
   var playback = null;
   
-  console.log("Channel " + channel.id + " - Pausing: " + command.parameters.length);
+  console.log(`Channel ${channel.id} - Pausing: ${command.parameters.length}`);
   
   var timer = null;
   var value = parseInt(command.parameters.length, 10);
   
-  call.hangupCallback = function() {
+  call.hangupCallback = () => {
     if (timer) {
       clearTimeout(timer);
       call.hangupCallback = null;
@@ -688,8 +690,8 @@ twimlActions.Pause = function(command, callback) {
   };
   
   // set a timer and wait
-  timer = setTimeout(function() {
-    console.log("Channel " + channel.id + " - Pause complete");
+  timer = setTimeout(() => {
+    console.log(`Channel ${channel.id} - Pause complete`);
     if (call.hungup) {
       return call.terminateCall();
     } else {
@@ -707,7 +709,7 @@ twimlActions.Pause = function(command, callback) {
     additional instructions.
 
 **************************************************************************************/
-twimlActions.Record = function(command, callback) {
+twimlActions.Record = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -723,14 +725,14 @@ twimlActions.Record = function(command, callback) {
   // terminate recording on which tones?
   var finishOnKey = command.parameters.finishOnKey || "any";
   
-  call.hangupCallback = function() {
+  call.hangupCallback = () => {
     console.log("Call hung up!");
   }
   
   var fname = uuid.v4();
   
   // log the start
-  console.log("Channel " + channel.id + " - Recording: " + fname + ".wav");
+  console.log(`Channel ${channel.id} - Recording: ${fname}.wav`);
   
   // create parameters for the recording
   var params = {
@@ -747,25 +749,25 @@ twimlActions.Record = function(command, callback) {
   // start the recording process
   var recordStartTime = new Date().getTime();
   
-  channel.record(params, function(err, recording) {
+  channel.record(params, (err, recording) => {
     if (err) {
-      console.log("Error starting recording: " + err.message);
+      console.log(`Error starting recording: ${err.message}`);
       return call.termiateCall();
     }
   
-    recording.on("RecordingStarted", function(event, rec) {
-      console.log("Channel " + channel.id + " - Started recording");
+    recording.on("RecordingStarted", (event, rec) => {
+      console.log(`Channel ${channel.id} - Started recording`);
     });
   
-    recording.on("RecordingFailed", function(event, rec) {
-      console.log("Channel " + channel.id + " - Recording Failed");
+    recording.on("RecordingFailed", (event, rec) => {
+      console.log(`Channel ${channel.id} - Recording Failed`);
       console.dir(event);
       return callback();
     });
   
-    recording.on("RecordingFinished", function(event, rec) {
+    recording.on("RecordingFinished", (event, rec) => {
       var recordEndTime = new Date().getTime();
-      console.log("Channel " + channel.id + " - Finished recording");
+      console.log(`Channel ${channel.id} - Finished recording`);
 
       // send digits to the server, get next XML block
       var method = command.parameters.method || "POST";
@@ -775,9 +777,9 @@ twimlActions.Record = function(command, callback) {
       // TODO: assemble the same basic data that Twilio provides
       
       // Now create the URL for this file so it can be played
-      var local_uri = "recording:" + fname;
+      var local_uri = `recording:${fname}`;
       form.append("RecordingUri", local_uri);
-      form.append("RecordingURL", ariaConfig.serverBaseUrl + fname +".wav");
+      form.append("RecordingURL", `${ariaConfig.serverBaseUrl + fname}.wav`);
       form.append("RecordingDuration", (recordEndTime - recordStartTime));
       form.append("Digits", call.digits);
       return fetchTwiml(method, url, call, form);
@@ -821,7 +823,7 @@ twimlActions.Record = function(command, callback) {
     system is out of scope for Aria.)
 
 **************************************************************************************/
-twimlActions.Dial = function(command, callback) {
+twimlActions.Dial = (command, callback) => {
 
   var call = command.call;
   var originalChannel = call.channel;
@@ -829,22 +831,22 @@ twimlActions.Dial = function(command, callback) {
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + call.channel.id + " - Dialing: " + command.value);
+  console.log(`Channel ${call.channel.id} - Dialing: ${command.value}`);
 
-  var originate = function(channel, destination, callerId) {
+  var originate = (channel, destination, callerId) => {
     var dialed = client.Channel();
     call.dialedChannel = dialed;
     
-    dialed.on("StasisStart", function(event, dialed) {
+    dialed.on("StasisStart", (event, dialed) => {
       if (command.parameters.bridge && (command.parameters.bridge === "false")) {
         // automatic bridging of the channels is disabled 
         
-        dialed.on("StasisEnd", function(event, dialed) {
+        dialed.on("StasisEnd", (event, dialed) => {
           // dialedExit(dialed, bridge);
           console.log("Stasis End On Dialed Channel");
         });
 
-        dialed.answer(function(err) {
+        dialed.answer(err => {
           if (err) {
             throw err; // TODO: trap and handle this.
           }
@@ -868,11 +870,11 @@ twimlActions.Dial = function(command, callback) {
       
         // rather than registering another handler, perhaps this should hook the active
         // handler provided by the call object?
-        channel.on("StasisEnd", function(event, channel) {
+        channel.on("StasisEnd", (event, channel) => {
           hangupDialed(channel, dialed);
         });
 
-        dialed.on("ChannelDestroyed", function(event, dialed) {
+        dialed.on("ChannelDestroyed", (event, dialed) => {
           hangupOriginal(channel, dialed);
         });
       
@@ -883,52 +885,52 @@ twimlActions.Dial = function(command, callback) {
     dialed.originate({
         endpoint: destination,
         app: "aria",
-        callerId: callerId,
+        callerId,
         appArgs: "dialed"
       },
-      function(err, dialed) {
+      (err, dialed) => {
         if (err) {
-          console.log("Channel " + channel.id + " - Error originating outbound call: " + err.message);
+          console.log(`Channel ${channel.id} - Error originating outbound call: ${err.message}`);
           return callback();
         }
       });
   };
 
   // handler for original channel hanging. gracefully hangup the dialed channel
-  var hangupDialed = function(channel, dialed) {
+  var hangupDialed = ({id}, dialed) => {
     console.log(
       "Channel %s - Channel has left the application. Hanging up dialed channel %s",
-      channel.id, dialed.id);
+      id, dialed.id);
 
     // hangup the other end
-    dialed.hangup(function(err) {
+    dialed.hangup(err => {
       // ignore error since dialed channel could have hung up, causing the
       // original channel to exit Stasis
     });
   };
 
   // handler for dialed channel hanging up.
-  var hangupOriginal = function(channel, dialed) {
+  var hangupOriginal = (channel, {id}) => {
     console.log(
       "Channel %s - Dialed channel %s has been hung up.",
-      channel.id, dialed.id);
+      channel.id, id);
 
     // hangup the original channel
-    channel.hangup(function(err) {
+    channel.hangup(err => {
       // ignore error since original channel could have hung up, causing the
       // dialed channel to exit Stasis
     });
   };
 
   // handler for dialed channel entering Stasis
-  var joinMixingBridge = function(channel, dialed) {
+  var joinMixingBridge = (channel, dialed) => {
     var bridge = client.Bridge();
 
-    dialed.on("StasisEnd", function(event, dialed) {
+    dialed.on("StasisEnd", (event, dialed) => {
       dialedExit(dialed, bridge);
     });
 
-    dialed.answer(function(err) {
+    dialed.answer(err => {
       if (err) {
         throw err; // TODO: trap and handle this.
       }
@@ -939,7 +941,7 @@ twimlActions.Dial = function(command, callback) {
 
     bridge.create({
       type: "mixing"
-    }, function(err, bridge) {
+    }, (err, bridge) => {
       if (err) {
         throw err; // TODO: trap and handle this.
       }
@@ -951,12 +953,12 @@ twimlActions.Dial = function(command, callback) {
   };
 
   // handler for the dialed channel leaving Stasis
-  var dialedExit = function(dialed, bridge) {
+  var dialedExit = ({name}, bridge) => {
     console.log(
       "Channel %s - Dialed channel %s has left our application, destroying bridge %s",
-      call.channel.id, dialed.name, bridge.id);
+      call.channel.id, name, bridge.id);
 
-    bridge.destroy(function(err) {
+    bridge.destroy(err => {
       if (err) {
         throw err;
       }
@@ -964,13 +966,13 @@ twimlActions.Dial = function(command, callback) {
   };
 
   // handler for new mixing bridge ready for channels to be added to it
-  var addChannelsToBridge = function(channel, dialed, bridge) {
+  var addChannelsToBridge = ({id}, bridge) => {
     console.log("Channel %s - Adding channel %s and dialed channel %s to bridge %s",
-      channel.id, channel.id, dialed.id, bridge.id);
+      id, id, id, bridge.id);
 
     bridge.addChannel({
-      channel: [channel.id, dialed.id]
-    }, function(err) {
+      channel: [id, id]
+    }, err => {
       if (err) {
         throw err;
       }
@@ -978,8 +980,8 @@ twimlActions.Dial = function(command, callback) {
   };
 
   call.to = command.value;
-  var dest = ariaConfig.trunk.technology + "/" + command.value + "@" + ariaConfig.trunk.id;
-  console.log("Channel " + originalChannel.id + " - Placing outbound call to: " + dest);
+  var dest = `${ariaConfig.trunk.technology}/${command.value}@${ariaConfig.trunk.id}`;
+  console.log(`Channel ${originalChannel.id} - Placing outbound call to: ${dest}`);
   var cid = command.parameters.callerId || "";
   originate(call.channel, dest, cid);
 
@@ -993,48 +995,48 @@ twimlActions.Dial = function(command, callback) {
     call.originatingChannel and call.dialedChannel.
 
 **************************************************************************************/
-twimlActions.Bridge = function(command, callback) {
+twimlActions.Bridge = (command, callback) => {
 
   var call = command.call;
   var client = call.client;
   
-  console.log("Channel " + call.originatingChannel.id + " - Bridge");
+  console.log(`Channel ${call.originatingChannel.id} - Bridge`);
 
   // handler for original channel hanging. gracefully hangup the dialed channel
-  var hangupDialed = function(channel, dialed) {
+  var hangupDialed = ({id}, dialed) => {
     console.log(
       "Channel %s - Channel has left the application. Hanging up dialed channel %s",
-      channel.id, dialed.id);
+      id, dialed.id);
 
     // hangup the other end
-    dialed.hangup(function(err) {
+    dialed.hangup(err => {
       // ignore error since dialed channel could have hung up, causing the
       // original channel to exit Stasis
     });
   };
 
   // handler for dialed channel hanging up.
-  var hangupOriginal = function(channel, dialed) {
+  var hangupOriginal = (channel, {id}) => {
     console.log(
       "Channel %s - Dialed channel %s has been hung up.",
-      channel.id, dialed.id);
+      channel.id, id);
 
     // hangup the original channel
-    channel.hangup(function(err) {
+    channel.hangup(err => {
       // ignore error since original channel could have hung up, causing the
       // dialed channel to exit Stasis
     });
   };
 
   // handler for dialed channel entering Stasis
-  var joinMixingBridge = function(channel, dialed) {
+  var joinMixingBridge = (channel, dialed) => {
     var bridge = client.Bridge();
 
-    dialed.on("StasisEnd", function(event, dialed) {
+    dialed.on("StasisEnd", (event, dialed) => {
       dialedExit(dialed, bridge);
     });
 
-    dialed.answer(function(err) {
+    dialed.answer(err => {
       if (err) {
         throw err; // TODO: trap and handle this.
       }
@@ -1045,7 +1047,7 @@ twimlActions.Bridge = function(command, callback) {
 
     bridge.create({
       type: "mixing"
-    }, function(err, bridge) {
+    }, (err, bridge) => {
       if (err) {
         throw err; // TODO: trap and handle this.
       }
@@ -1057,12 +1059,12 @@ twimlActions.Bridge = function(command, callback) {
   };
 
   // handler for the dialed channel leaving Stasis
-  var dialedExit = function(dialed, bridge) {
+  var dialedExit = ({name}, bridge) => {
     console.log(
       "Channel %s - Dialed channel %s has left our application, destroying bridge %s",
-      call.channel.id, dialed.name, bridge.id);
+      call.channel.id, name, bridge.id);
 
-    bridge.destroy(function(err) {
+    bridge.destroy(err => {
       if (err) {
         throw err;
       }
@@ -1070,13 +1072,13 @@ twimlActions.Bridge = function(command, callback) {
   };
 
   // handler for new mixing bridge ready for channels to be added to it
-  var addChannelsToBridge = function(channel, dialed, bridge) {
+  var addChannelsToBridge = ({id}, bridge) => {
     console.log("Channel %s - Adding channel %s and dialed channel %s to bridge %s",
-      channel.id, channel.id, dialed.id, bridge.id);
+      id, id, id, bridge.id);
 
     bridge.addChannel({
-      channel: [channel.id, dialed.id]
-    }, function(err) {
+      channel: [id, id]
+    }, err => {
       if (err) {
         throw err;
       }
@@ -1086,11 +1088,11 @@ twimlActions.Bridge = function(command, callback) {
 
   // rather than registering another handler, perhaps this should hook the active
   // handler provided by the call object?
-  call.originatingChannel.on("StasisEnd", function(event, channel) {
+  call.originatingChannel.on("StasisEnd", (event, channel) => {
     hangupDialed(channel, call.dialedChannel);
   });
 
-  call.dialedChannel.on("ChannelDestroyed", function(event, dialed) {
+  call.dialedChannel.on("ChannelDestroyed", (event, dialed) => {
     hangupOriginal(call.originatingChannel, dialed);
   });
 
@@ -1106,7 +1108,7 @@ twimlActions.Bridge = function(command, callback) {
     Hold the active call leg.
 
 **************************************************************************************/
-twimlActions.Hold = function(command, callback) {
+twimlActions.Hold = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
@@ -1114,24 +1116,22 @@ twimlActions.Hold = function(command, callback) {
   var playback = null;
   var bridge = null;
   
-  console.log("Channel " + channel.id + " - Hold");
+  console.log(`Channel ${channel.id} - Hold`);
 
   // find or create a holding bridge
   
-  client.bridges.list(function(err, bridges) {
+  client.bridges.list((err, bridges) => {
     if (err) {
       throw err;
     }
 
-    bridge = bridges.filter(function(candidate) {
-      return candidate.bridge_type === 'holding';
-    })[0];
+    bridge = bridges.filter(({bridge_type}) => bridge_type === 'holding')[0];
 
     if (bridge) {
       console.log(util.format('Using bridge %s', bridge.id));
       start();
     } else {
-      client.bridges.create({type: 'holding'}, function(err, newBridge) {
+      client.bridges.create({type: 'holding'}, (err, newBridge) => {
         if (err) {
           throw err;
         }
@@ -1143,14 +1143,14 @@ twimlActions.Hold = function(command, callback) {
   });
 
   // continue the call on the next tick
-  var start = function() {
-    setTimeout(function() {
-      bridge.addChannel({channel: channel.id}, function(err) {
+  var start = () => {
+    setTimeout(() => {
+      bridge.addChannel({channel: channel.id}, err => {
         if (err) {
           throw err;
         }
 
-        bridge.startMoh(function(err) {
+        bridge.startMoh(err => {
           if (err) {
             throw err;
           }
@@ -1169,19 +1169,17 @@ twimlActions.Hold = function(command, callback) {
     Unhold a held call leg.
 
 **************************************************************************************/
-twimlActions.Unhold = function(command, callback) {
+twimlActions.Unhold = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Hold");
+  console.log(`Channel ${channel.id} - Hold`);
 
   // continue the call on the next tick
-  setTimeout(function() {
-    return callback();
-  }, 0);
+  setTimeout(() => callback(), 0);
 
 };
 
@@ -1193,19 +1191,17 @@ twimlActions.Unhold = function(command, callback) {
     Reject a call.
 
 **************************************************************************************/
-twimlActions.Reject = function(command, callback) {
+twimlActions.Reject = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
   var playback = null;
   
-  console.log("Channel " + channel.id + " - Reject");
+  console.log(`Channel ${channel.id} - Reject`);
   
   // terminate the call on the next tick
-  setTimeout(function() {
-    return call.terminateCall();
-  }, 0);
+  setTimeout(() => call.terminateCall(), 0);
   
 };
 
@@ -1216,17 +1212,17 @@ twimlActions.Reject = function(command, callback) {
     End a call.
 
 **************************************************************************************/
-twimlActions.Hangup = function(command, callback) {
+twimlActions.Hangup = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Hangup");
+  console.log(`Channel ${channel.id} - Hangup`);
 
   // terminate the call on the next tick
-  setTimeout(function() {
+  setTimeout(() => {
     call.hungup = true;
     channel.hangup();
     return call.terminateCall();
@@ -1242,19 +1238,19 @@ twimlActions.Hangup = function(command, callback) {
     with the result.
 
 **************************************************************************************/
-twimlActions.Redirect = function(command, callback) {
+twimlActions.Redirect = (command, callback) => {
 
   var call = command.call;
   var channel = call.channel;
   var client = call.client;
   var playback = null;
 
-  console.log("Channel " + channel.id + " - Redirect: " + command.value);
+  console.log(`Channel ${channel.id} - Redirect: ${command.value}`);
   
   // TODO: implement SMS message send
   
   // go on to the next action
-  setTimeout(function() {
+  setTimeout(() => {
     try {
       var method = command.parameters.method || "POST";
       var redirectURL = null;
@@ -1319,17 +1315,18 @@ twimlActions.Redirect = function(command, callback) {
 	See the README.md file or the wiki for more information on configuring Aria.
 	
 **************************************************************************************/
-(function() {
+(() => {
 
-  var rc = null;   
+  let rc = null;   
 
   // source the configuration
-  ariaConfig = require("./config/aria.conf.js");
+  // ariaConfig = require("/etc/asterisk/aria.conf.js");
+  
 
   // initialize local http server for recorded files
-  var recApp = express();
+  const recApp = express();
   recApp.use(express.static(ariaConfig.recordingPath));
-  var recServer = http.createServer(recApp);
+  const recServer = http.createServer(recApp);
   recServer.listen(ariaConfig.recordingPort);
   // TODO: make this secure, at least to some degree
   
@@ -1350,13 +1347,13 @@ twimlActions.Redirect = function(command, callback) {
       console.log(util.format("Channel %s - Entered the application", channel.id));
 
       // figure out what technology is in use so we know what to use for routing
-      var ctype = event.channel.name.split("/")[0];
+      const ctype = event.channel.name.split("/")[0];
 
       // SIP Client Call
       if ((ctype === "SIP") || (ctype === "PJSIP")) {
 
         // Route the call based on dialed Number
-        var number = channel.dialplan.exten;
+        let number = channel.dialplan.exten;
 
         // Replace the number with the value of arg[0] if present - FOR TESTING
         if (event.args[0]) {
@@ -1364,15 +1361,15 @@ twimlActions.Redirect = function(command, callback) {
         }
 
         // Query redis for the assigned url
-        var lookup = "/numbers/" + number;
-        var app = rc.hgetall(lookup, function(err, value) {
+        const lookup = `/numbers/${number}`;
+        const app = rc.hgetall(lookup, (err, value) => {
           if (err || !value) {
             // log the error to the appropriate facility
 
             // respond with a tri-tone error on the line
           } else {
             // fetch the Twiml from the provided url
-            var call = new AriaCall(client, channel, value.url);
+            const call = new AriaCall(client, channel, value.url);
           }
         });
 
@@ -1386,8 +1383,8 @@ twimlActions.Redirect = function(command, callback) {
     }
 
     // handler for StasisEnd event
-    function stasisEnd(event, channel) {
-      console.log(util.format("Channel %s - Left the application", channel.id));
+    function stasisEnd(event, {id}) {
+      console.log(util.format("Channel %s - Left the application", id));
     }
 
     // create a redis client
@@ -1399,11 +1396,11 @@ twimlActions.Redirect = function(command, callback) {
   }
 
   console.log("Initializing Aria Twiml actions.");
-  Object.keys(twimlActions).forEach(function(key) {
-    console.log(" - " + key);
+  Object.keys(twimlActions).forEach(key => {
+    console.log(` - ${key}`);
   });
   // connect to the local Asterisk server
   // TODO: validate config values
   ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded);
-}());
+})();
 
