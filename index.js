@@ -49,26 +49,25 @@ const rc = redis.createClient();
     
 **************************************************************************************/
 
-const makeAction = (xml, parent) => {
+const makeAction = ({name, val, attr, children}, parent) => {
 
   const action = {};
 
-  action.name = xml.name;
+  action.name = name;
 
   // console.log(`Input Object: ${util.inspect(xml)}`);
-  console.log(`Running Action '${action.name}' With Text Value '${xml.val}' | Child length: ${xml.children.length}.`);
+  console.log(`Running Action '${name}' With Text Value '${val}' | Child length: ${children.length}.`);
 
-  action.value = xml.val.trim();
-  action.parameters = xml.attr;
+  action.value = val.trim();
+  action.parameters = attr;
   action.call = parent;
   action.next = null;
   action.children = null;
 
-  /*
   let lastChild = null;
-  if (xml.children && xml.children.length > 1) {
-    for (let i = 0; i < xml.children.length; i = i + 1) {
-      const x = xml.children[i];
+  if (children && children.length > 1) {
+    for (let i = 0; i < children.length; i = i + 1) {
+      const x = children[i];
       console.log(`Calling makeAction on Child: ${util.inspect(x)}`);
       const a = makeAction(x, parent);
       if (!action.children) {
@@ -81,7 +80,6 @@ const makeAction = (xml, parent) => {
     }
     lastChild.next = null;
   }
-  */
 
   return action;
 };
@@ -102,7 +100,14 @@ const fetchTwiml = (method, twimlURL, call, data) => {
   }
   
   fetch(twimlURL, options)
+    // JE: This XML parser is quite dumb about carriage returns from web servers, so forcibly kill them all
     .then(res => res.text()).then(twiml => {
+
+      // Consider refactorig this, but for now, forcibly ensures node insertions are not improperly considered due to "hard" whitespace
+      twiml = twiml.replace(/(\r\n|\n|\r)/gm, '');
+      twiml = twiml.replace(/>\s*/g, '>');  // Replace "> " with ">"
+      twiml = twiml.replace(/\s*</g, '<');  // Replace "< " with "<"
+
       // create the linked list of actions to execute
       const first = null;
       let last = null;
@@ -116,14 +121,10 @@ console.log(`XML Body: ${twiml}`);
       const xml = new parser.XmlDocument(twiml);
       xml.eachChild((command, index, {length}) => {
 
-	// Command: <Say>Hello from FluentStream!</Say>
         // console.log(`Initial command is ${command} with call ${util.inspect(call)}`);
         console.log(`Initial command is ${command}`);
 
         const action = makeAction(command, call);
-
-        // Josh hack to make a single action work 
-        call.processCall();
 
         if (!call.stack) {
           call.stack = action;
@@ -1418,28 +1419,33 @@ twimlActions.Redirect = (command, callback) => {
   Object.keys(twimlActions).forEach(key => {
     console.log(` - ${key}`);
   });
+
   // connect to the local Asterisk server
   // TODO: validate config values
   // ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded)
 
   console.log(`Attempting to Instantiate Aria Twiml on ${ariaConfig.asterisk} | user: ${ariaConfig.username}`);
   
-  ari.connect(ariaConfig.asterisk, ariaConfig.username, ariaConfig.password, clientLoaded)
-    .then(function (ari) {
-       console.log(`Connected to Aria Twiml on ${ariaConfig.asterisk} | user: ${ariaConfig.username}`);
-	ari.asterisk.getInfo()
-	  .then(function (asteriskinfo) { console.log(asteriskinfo)})
-	  .catch(function (err) {});
-     })
-    .catch(function (err) {
-       console.log(`Error connecting to ARI is '${err}'`);
-     });
-
-  /*
-  ari.asterisk.getInfo()
-  .then(function (asteriskinfo) { console.log(asteriskinfo)})
-  .catch(function (err) {});
-  */
+  ari
+    .connect(
+      ariaConfig.asterisk,
+      ariaConfig.username,
+      ariaConfig.password,
+      clientLoaded
+    )
+    .then(function(ari) {
+      console.log(
+        `Connected to Aria Twiml on ${ariaConfig.asterisk} | user: ${ariaConfig.username}`
+      );
+      ari.asterisk
+        .getInfo()
+        .then(function(asteriskinfo) {
+          console.log(asteriskinfo);
+        })
+        .catch(function(err) {});
+    })
+    .catch(function(err) {
+      console.log(`Error connecting to ARI is '${err}'`);
+    });
 
 })();
-
