@@ -98,7 +98,6 @@ const fetchTwiml = (method, twimlURL, call, data) => {
   }
 
   fetch(twimlURL, options)
-    // JE: This XML parser is quite dumb about carriage returns from web servers, so forcibly kill them all
     .then(res => res.text())
     .then(twiml => {
       // Consider refactoring this, but for now, forcibly ensures node insertions
@@ -308,7 +307,7 @@ twimlActions.Say = (command, callback) => {
   var client = call.client;
   var playback = null;
 
-  console.log(`Channel ${channel.id} - Say: ${command.value}`);
+  console.log(`Channel ${channel.id} - Action Say: ${command.value}`);
 
   // attach a handler function for digits
   call.digitCallback = (digit, digits) => {
@@ -349,6 +348,7 @@ twimlActions.Say = (command, callback) => {
       } else {
         speech.say(command.value, `${fileName}.wav16`, err => {
           if (err) {
+            log.error(`Error on speech synthesization is ${err}`);
             exit();
           } else {
             play(fileName, exit);
