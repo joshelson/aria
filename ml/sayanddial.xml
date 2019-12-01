@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Please wait while we connect you to our switchboard.</Say>
+  <Dial>
+    <Number>+18004444444</Number>
+  </Dial>
+</Response>

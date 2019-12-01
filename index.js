@@ -31,7 +31,6 @@ import * as Promise from "bluebird";
 import ariaConfig from "./config/aria.conf.js";
 
 const twimlActions = {};
-// const ariaConfig = {};
 const rc = redis.createClient();
 
 ;/**************************************************************************************
@@ -50,21 +49,27 @@ const rc = redis.createClient();
     
 **************************************************************************************/
 
-const makeAction = ({name, val, attr, children}, parent) => {
+const makeAction = (xml, parent) => {
 
   const action = {};
 
-  action.name = name;
-  action.value = val.trim();
-  action.parameters = attr;
+  action.name = xml.name;
+
+  // console.log(`Input Object: ${util.inspect(xml)}`);
+  console.log(`Running Action '${action.name}' With Text Value '${xml.val}' | Child length: ${xml.children.length}.`);
+
+  action.value = xml.val.trim();
+  action.parameters = xml.attr;
   action.call = parent;
   action.next = null;
   action.children = null;
 
+  /*
   let lastChild = null;
-  if (children && children.length > 0) {
-    for (let i = 0; i < children.length; i = i + 1) {
-      const x = children[i];
+  if (xml.children && xml.children.length > 1) {
+    for (let i = 0; i < xml.children.length; i = i + 1) {
+      const x = xml.children[i];
+      console.log(`Calling makeAction on Child: ${util.inspect(x)}`);
       const a = makeAction(x, parent);
       if (!action.children) {
         action.children = a;
@@ -76,6 +81,7 @@ const makeAction = ({name, val, attr, children}, parent) => {
     }
     lastChild.next = null;
   }
+  */
 
   return action;
 };
@@ -104,14 +110,21 @@ const fetchTwiml = (method, twimlURL, call, data) => {
       // wipe out the old stack
       call.stack = null;
 
-console.log("XML Body:");
-console.log(twiml);
+console.log(`XML Body: ${twiml}`);
 
       // parse the xml and create a new stack
       const xml = new parser.XmlDocument(twiml);
       xml.eachChild((command, index, {length}) => {
 
+	// Command: <Say>Hello from FluentStream!</Say>
+        // console.log(`Initial command is ${command} with call ${util.inspect(call)}`);
+        console.log(`Initial command is ${command}`);
+
         const action = makeAction(command, call);
+
+        // Josh hack to make a single action work 
+        call.processCall();
+
         if (!call.stack) {
           call.stack = action;
           last = action;
@@ -121,6 +134,7 @@ console.log(twiml);
         }
         if (index === (length - 1)) {
           last.next = null;
+          console.log(`Processing call...`);
           call.processCall();
         }
       });
@@ -200,6 +214,8 @@ class AriaCall {
     });
 
     // fetch the Twiml for this call
+    
+    console.log(`Initial TwiML Request GET to ${url}`);
     fetchTwiml("GET", url, that, null);
 
   }
@@ -1319,10 +1335,6 @@ twimlActions.Redirect = (command, callback) => {
 
   let rc = null;   
 
-  // source the configuration
-  // ariaConfig = require("/etc/asterisk/aria.conf.js");
-  
-
   // initialize local http server for recorded files
   const recApp = express();
   recApp.use(express.static(ariaConfig.recordingPath));
@@ -1373,6 +1385,7 @@ twimlActions.Redirect = (command, callback) => {
             // respond with a tri-tone error on the line
           } else {
             // fetch the Twiml from the provided url
+            console.log(`Initiating new Aria application on ${number}`);
             const call = new AriaCall(client, channel, value.url);
           }
         });
