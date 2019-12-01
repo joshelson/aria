@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Play loop="1">https://www.pacdv.com/sounds/voices/am-i-totally-screwed-or.wav</Play>
+  <Play loop="1">https://www.vocal.com/wp-content/uploads/2012/05/gsm_fr_13p0k.wav</Play>
+  <Play loop="1">http://mauvecloud.net/sounds/pcm1608m.wav</Play>
+  <Play loop="1">http://www.music.helsinki.fi/tmt/opetus/uusmedia/esim/a2002011001-e02-16kHz.wav</Play>
   <Say>Please wait while we connect you to our switchboard.</Say>
   <Dial>
     <Number>+18004444444</Number>

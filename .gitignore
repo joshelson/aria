@@ -1,6 +1,8 @@
 # Config
 config/*
 
+ml/audio/*
+
 # Logs
 logs
 *.log

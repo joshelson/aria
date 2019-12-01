@@ -15,7 +15,7 @@
   "dependencies": {
     "ari-client": "~2.2.0",
     "bluebird": "~3.7.2",
-    "download": "~7.1.0",
+    "download": "~4.4.3",
     "express": "~4.17.1",
     "flite": "~0.1.2",
     "form-data": "~3.0.0",

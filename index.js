@@ -496,16 +496,20 @@ twimlActions.Play = (command, callback) => {
     }
   }
 
+  // JE: Todo, add ability to call local filesystem inbuilt audio files as needed 
+  
   // if it does not have a protocol it must be relative - resolve it
   if (!fileURL.protocol) {
     var resolved = url.resolve(call.baseUrl, command.value);
     fileURL = url.parse(resolved);
+    console.log(`No file protocol. Resolved file URL to ${util.inspect(fileURL)}`);
   }
 
   // generate a hash which we will use as the filename
   var hashName = md5(fileURL.href);
   var fileName = hashName + path.extname(fileURL.href);
 
+  // JE Todo: Convert to async and newer version of download
   // create a downloader object and fetch the file
   var dl = new download({
     mode: "755"
@@ -524,7 +528,9 @@ twimlActions.Play = (command, callback) => {
         play(hashName, exit);
       }
     });
-}; /**************************************************************************************
+}; 
+
+/**************************************************************************************
 
     Aria Gather action
     
